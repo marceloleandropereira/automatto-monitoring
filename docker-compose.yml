@@ -1,0 +1,93 @@
+version: "3.7"
+
+services:
+  # 1) Métricas do host
+  node-exporter:
+    image: prom/node-exporter:latest
+    network_mode: host
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - --path.procfs=/host/proc
+      - --path.sysfs=/host/sys
+      - --path.rootfs=/rootfs
+    deploy:
+      mode: global
+
+  # 2) Métricas de container
+  cadvisor:
+    image: gcr.io/google-containers/cadvisor:latest
+    network_mode: host
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+    deploy:
+      mode: global
+
+  # 3) Redis exporter
+  redis-exporter:
+    image: oliver006/redis_exporter:latest
+    network_mode: host
+    environment:
+      - REDIS_ADDR=redis://redis:6379
+    deploy:
+      mode: global
+
+  # 4) Process exporter (p/ Sidekiq)
+  process-exporter:
+    image: ncabatoff/process-exporter:latest
+    network_mode: host
+    volumes:
+      - /proc:/host/proc:ro
+      - ./process-config.yml:/etc/process-exporter/config.yml:ro
+    command:
+      - --config.path=/etc/process-exporter/config.yml
+    deploy:
+      mode: global
+
+  # 5) Postgres
+    # Postgres Exporter para Chatwoot
+  postgres-exporter-chatwoot:
+    image: wrouesnel/postgres_exporter:latest
+    network_mode: host
+    environment:
+      - DATA_SOURCE_NAME=postgresql://postgres:gGV3p1K24K2PwJ1f@postgres:5432/chatwoot?sslmode=disable
+    ports:
+      - "9187:9187"
+
+  # Postgres Exporter para Evolution API
+  postgres-exporter-evolution:
+    image: wrouesnel/postgres_exporter:latest
+    network_mode: host
+    environment:
+      - DATA_SOURCE_NAME=postgresql://postgres:gGV3p1K24K2PwJ1f@postgres:5432/evolution?sslmode=disable
+    ports:
+      - "9188:9188"
+
+  # 6) Prometheus
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - prometheus_data:/prometheus
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+
+  # 7) Grafana
+  grafana:
+    image: grafana/grafana-oss:latest
+    ports:
+      - "3002:3002"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=XfvfRxPI442bl5Od
+    volumes:
+      - grafana_data:/var/lib/grafana
+
+volumes:
+  prometheus_data:
+  grafana_data:
