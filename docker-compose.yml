@@ -4,7 +4,8 @@ services:
   # 1) Métricas do host
   node-exporter:
     image: prom/node-exporter:latest
-    network_mode: host
+    ports:
+      - "9100:9100"
     volumes:
       - /proc:/host/proc:ro
       - /sys:/host/sys:ro
@@ -13,13 +14,16 @@ services:
       - --path.procfs=/host/proc
       - --path.sysfs=/host/sys
       - --path.rootfs=/rootfs
+    networks:
+      - network_public
     deploy:
       mode: global
 
   # 2) Métricas de container
   cadvisor:
     image: gcr.io/cadvisor/cadvisor:latest
-    network_mode: host
+    ports:
+      - "8080:8080"
     privileged: true
     devices:
       - /dev/kmsg:/dev/kmsg
@@ -30,27 +34,35 @@ services:
       - /sys/fs/cgroup:/sys/fs/cgroup:ro
       - /var/lib/docker/:/var/lib/docker:ro
       - /dev/disk/:/dev/disk:ro
+    networks:
+      - network_public
     deploy:
       mode: global
 
   # 3) Redis exporter
   redis-exporter:
     image: oliver006/redis_exporter:latest
-    network_mode: host
+    ports:
+      - "9121:9121"
     environment:
       - REDIS_ADDR=redis://redis:6379
+    networks:
+      - network_public
     deploy:
       mode: global
 
   # 4) Process exporter (p/ Sidekiq)
   process-exporter:
     image: ncabatoff/process-exporter:latest
-    network_mode: host
+    ports:
+      - "9256:9256"
     volumes:
       - /proc:/host/proc:ro
       - ./process-config.yml:/etc/process-exporter/config.yml:ro
     command:
       - --config.path=/etc/process-exporter/config.yml
+    networks:
+      - network_public
     deploy:
       mode: global
 
@@ -58,20 +70,22 @@ services:
     # Postgres Exporter para Chatwoot
   postgres-exporter-chatwoot:
     image: wrouesnel/postgres_exporter:latest
-    network_mode: host
-    environment:
-      - DATA_SOURCE_NAME=postgresql://postgres:gGV3p1K24K2PwJ1f@postgres:5432/chatwoot?sslmode=disable
     ports:
       - "9187:9187"
+    environment:
+      - DATA_SOURCE_NAME=postgresql://postgres:gGV3p1K24K2PwJ1f@postgres:5432/chatwoot?sslmode=disable
+    networks:
+      - network_public
 
   # Postgres Exporter para Evolution API
   postgres-exporter-evolution:
     image: wrouesnel/postgres_exporter:latest
-    network_mode: host
-    environment:
-      - DATA_SOURCE_NAME=postgresql://postgres:gGV3p1K24K2PwJ1f@postgres:5432/evolution?sslmode=disable
     ports:
       - "9188:9188"
+    environment:
+      - DATA_SOURCE_NAME=postgresql://postgres:gGV3p1K24K2PwJ1f@postgres:5432/evolution?sslmode=disable
+    networks:
+      - network_public
 
   # 6) Prometheus
   prometheus:
@@ -89,6 +103,12 @@ services:
       - --web.route-prefix=/
     networks:
       - network_public
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.prometheus.rule=Host(`monitor.automatto.net`) && PathPrefix(`/prometheus`)"
@@ -113,6 +133,12 @@ services:
       - grafana_data:/var/lib/grafana
     networks:
       - network_public
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3002/api/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.grafana.rule=Host(`monitor.automatto.net`) && PathPrefix(`/grafana`)"
