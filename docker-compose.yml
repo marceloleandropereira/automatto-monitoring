@@ -17,28 +17,21 @@ services:
       mode: global
 
   # 2) Métricas de container
--  cadvisor:
--    image: gcr.io/google-containers/cadvisor:latest
-+  cadvisor:
-+    # use o repositório oficial e versão mais recente do cAdvisor
-+    image: gcr.io/cadvisor/cadvisor:latest   # :contentReference[oaicite:0]{index=0}
-     network_mode: host
-+    privileged: true                         # precisa de privilégios para ler cgroups :contentReference[oaicite:1]{index=1}
-+    devices:
-+      - /dev/kmsg:/dev/kmsg                  # para OOM e logs do kernel :contentReference[oaicite:2]{index=2}
-     volumes:
--      - /:/rootfs:ro
--      - /var/run:/var/run:ro
--      - /sys:/sys:ro
--      - /var/lib/docker/:/var/lib/docker:ro
-+      - /:/rootfs:ro
-+      - /var/run:/var/run:ro
-+      - /sys:/sys:ro
-+      - /sys/fs/cgroup:/sys/fs/cgroup:ro    # garante que todos os cgroups estejam visíveis
-+      - /var/lib/docker/:/var/lib/docker:ro
-+      - /dev/disk/:/dev/disk:ro            # opcional, se quiser métricas de disco
-     deploy:
-       mode: global
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    network_mode: host
+    privileged: true
+    devices:
+      - /dev/kmsg:/dev/kmsg
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /sys/fs/cgroup:/sys/fs/cgroup:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    deploy:
+      mode: global
 
   # 3) Redis exporter
   redis-exporter:
