@@ -1,1 +1,5 @@
+process_names:
+  - name: "sidekiq"
+    cmdline:
+      - sidekiq
 
