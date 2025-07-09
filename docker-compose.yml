@@ -85,6 +85,8 @@ services:
       - --config.file=/etc/prometheus/prometheus.yml
       - --storage.tsdb.retention.time=30d
       - --storage.tsdb.retention.size=10GB
+    networks:
+      - network_public
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.prometheus.rule=Host(`monitor.automatto.net`) && PathPrefix(`/prometheus`)"
@@ -104,6 +106,8 @@ services:
       - GF_SECURITY_ADMIN_PASSWORD=XfvfRxPI442bl5Od
     volumes:
       - grafana_data:/var/lib/grafana
+    networks:
+      - network_public
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.grafana.rule=Host(`monitor.automatto.net`) && PathPrefix(`/grafana`)"
