@@ -85,6 +85,14 @@ services:
       - --config.file=/etc/prometheus/prometheus.yml
       - --storage.tsdb.retention.time=30d
       - --storage.tsdb.retention.size=10GB
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.prometheus.rule=Host(`monitor.automatto.net`) && PathPrefix(`/prometheus`)"
+      - "traefik.http.middlewares.prometheus-strip-prefix.stripprefix.prefixes=/prometheus"
+      - "traefik.http.routers.prometheus.middlewares=prometheus-strip-prefix"
+      - "traefik.http.services.prometheus.loadbalancer.server.port=9090"
+      - "traefik.http.routers.prometheus.entrypoints=websecure"
+      - "traefik.http.routers.prometheus.tls.certresolver=myresolver"
 
   # 7) Grafana
   grafana:
@@ -96,7 +104,20 @@ services:
       - GF_SECURITY_ADMIN_PASSWORD=XfvfRxPI442bl5Od
     volumes:
       - grafana_data:/var/lib/grafana
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.grafana.rule=Host(`monitor.automatto.net`) && PathPrefix(`/grafana`)"
+      - "traefik.http.middlewares.grafana-strip-prefix.stripprefix.prefixes=/grafana"
+      - "traefik.http.routers.grafana.middlewares=grafana-strip-prefix"
+      - "traefik.http.services.grafana.loadbalancer.server.port=3002"
+      - "traefik.http.routers.grafana.entrypoints=websecure"
+      - "traefik.http.routers.grafana.tls.certresolver=myresolver"
 
 volumes:
   prometheus_data:
   grafana_data:
+
+networks:
+  network_public:
+    external: true
+    name: network_public
